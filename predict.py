@@ -20,7 +20,7 @@ from select import *
 import sys
 from time import ctime
 ### RUN OPTIONS ###
-MODEL_PATH = "./run/surface/deeplab/model_iou_77.pth.tar"
+MODEL_PATH = "/home/vision/Desktop/segmentation-selectstar-master/run/surface/deeplab/model_iou_77.pth.tar"
 ORIGINAL_HEIGHT = 300
 ORIGINAL_WIDTH = 300
 MODEL_HEIGHT = 300
@@ -32,8 +32,8 @@ CUDA = True if torch.cuda.is_available() else False
 
 
 MODE = 'jpg'  # 'mp4' or 'jpg'
-DATA_PATH = './input/jpgs'  # .mp4 path or folder containing jpg images
-OUTPUT_PATH = './output/jpgs'  # where video file or jpg frames folder should be saved.
+DATA_PATH = '/home/vision/Desktop/segmentation-selectstar-master/input/jpgs'  # .mp4 path or folder containing jpg images
+OUTPUT_PATH = '/home/vision/Desktop/segmentation-selectstar-master/output/jpgs'  # where video file or jpg frames folder should be saved.
 
 
 # MODE = 'mp4'
@@ -195,27 +195,26 @@ class ModelWrapper:
 
 def main():
 
-    host ='192.168.1.83'
-    port=10006
-    server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_sock.bind((host, port))
-    server_sock.listen(100)
+#    host ='192.168.1.83'
+#    port=10006
+#    server_sock.bind((host, port))
+#    server_sock.listen(100)
 
-    print("wait....")
-    client_socket, addr = server_sock.accept()
+#    print("wait....")
+#    client_socket, addr = server_sock.accept()
 
-    print('Connected by',addr)
-    data = client_socket.recv(1024)
-    print(data.decode("utf-8"), len(data))
+#    print('Connected by',addr)
+#    data = client_socket.recv(1024)
+#    print(data.decode("utf-8"), len(data))
+
     print('Loading model...')
     model_wrapper = ModelWrapper()
-    camera=jetson.utils.gstCamera(640,480,"csi://0")
-
+#    camera=jetson.utils.gstCamera(640,480,"csi://0")
 
     while True:
-        img, width, height = camera.CaptureRGBA(zeroCopy=1)
-        jetson.utils.cudaDeviceSynchronize()
-        jetson.utils.saveImageRGBA('./input/jpgs/image.jpg',img,width,height)
+#        img, width, height = camera.CaptureRGBA(zeroCopy=1)
+#        jetson.utils.cudaDeviceSynchronize()
+#        jetson.utils.saveImageRGBA('./input/jpgs/image.jpg',img,width,height)
 
         if MODE == 'mp4':
             generator = FrameGeneratorMP4(DATA_PATH, OUTPUT_PATH, show=SHOW_OUTPUT)
@@ -235,7 +234,7 @@ def main():
             generator.write(result)
 
         generator.close()
-        image=Image.open('./output/jpgs/image.jpg')#'./input/jpgs/input.jpg')
+        image=Image.open('/home/vision/Desktop/segmentation-selectstar-master/output/jpgs/image.jpg')#'./input/jpgs/input.jpg')
         pixel=np.array(image)
         sum=0
         for i in range(int(pixel.shape[1]/3),int(pixel.shape[1]*2/3)):# width
@@ -263,7 +262,7 @@ def main():
         elif avg[0]<100 and avg[1]>120 and avg[2]<100:
             print('sidewalk')
             sok=6
-        
+'''        
         if chk==sok:
             client_socket.send(sok.to_bytes(4, byteorder='little'))
         else:
@@ -271,7 +270,7 @@ def main():
 #        client_socket.send(data)
 		
         print('Done.')
-        
+'''        
 
 if __name__ == '__main__':
 
