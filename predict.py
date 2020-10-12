@@ -18,7 +18,10 @@ import time
 import socket
 from select import *
 import sys
+import os
 from time import ctime
+import threading
+import sys
 ### RUN OPTIONS ###
 MODEL_PATH = "/home/vision/Desktop/segmentation-selectstar-master/run/surface/deeplab/model_iou_77.pth.tar"
 ORIGINAL_HEIGHT = 300
@@ -192,29 +195,16 @@ class ModelWrapper:
                              interpolation=cv2.INTER_NEAREST)
         return resized
 
-
-def main():
-
-#    host ='192.168.1.83'
-#    port=10006
-#    server_sock.bind((host, port))
-#    server_sock.listen(100)
-
-#    print("wait....")
-#    client_socket, addr = server_sock.accept()
-
-#    print('Connected by',addr)
-#    data = client_socket.recv(1024)
-#    print(data.decode("utf-8"), len(data))
-
+def th1():
     print('Loading model...')
     model_wrapper = ModelWrapper()
-#    camera=jetson.utils.gstCamera(640,480,"csi://0")
-
+    camera=jetson.utils.gstCamera(640,480,"csi://0")
+    chk=0
+    sok=0
     while True:
-#        img, width, height = camera.CaptureRGBA(zeroCopy=1)
-#        jetson.utils.cudaDeviceSynchronize()
-#        jetson.utils.saveImageRGBA('./input/jpgs/image.jpg',img,width,height)
+        img, width, height = camera.CaptureRGBA(zeroCopy=1)
+        jetson.utils.cudaDeviceSynchronize()
+        jetson.utils.saveImageRGBA('/home/vision/Desktop/segmentation-selectstar-master/input/jpgs/image.jpg',img,width,height)
 
         if MODE == 'mp4':
             generator = FrameGeneratorMP4(DATA_PATH, OUTPUT_PATH, show=SHOW_OUTPUT)
@@ -243,35 +233,171 @@ def main():
         avg=sum/(pixel.shape[1]*2/3-pixel.shape[1]/3)*(pixel.shape[0]*2/3-pixel.shape[0]/3)
         print(avg[0],avg[1],avg[2])
 
-        chk=0
-        if avg[0]>155 and avg[1]>100 and avg[1]<155:
+        
+        
+        if avg[0]>100 and avg[1]>100 and avg[1]<150:
             print("bike lane")
-            sok=1
-        elif avg[0]>155 and avg[1]<100 and avg[2]<100:
+            sok=0
+        elif avg[0]>100 and avg[1]<150 and avg[2]<150:
             print('caution zone')
-            sok=2
-        elif avg[0]>155 and avg[1]<100 and avg[2]>155:
+            sok=1
+        elif avg[0]>100 and avg[1]<150 and avg[2]>100:
             print('crosswalk')
-            sok=3
-        elif avg[0]>155 and avg[1]>155 and avg[2]<155:
+            sok=2
+        elif avg[0]>100 and avg[1]>100 and avg[2]<150:
             print('guide_block')
-            sok=4
+            sok=3
         elif avg[0]<100 and avg[1]<100 and avg[2]>155:
             print('roadway')
-            sok=5
+            sok=4
         elif avg[0]<100 and avg[1]>120 and avg[2]<100:
             print('sidewalk')
-            sok=6
-'''        
-        if chk==sok:
-            client_socket.send(sok.to_bytes(4, byteorder='little'))
-        else:
-            chk=sok
-#        client_socket.send(data)
+            sok=0
+        if chk!=sok:
+#            print(data)
+            print(sok)
+            client_socket.send(data)       
+            client_socket.send(sok.to_bytes(4, byteorder='little'))   
+        chk=sok
 		
         print('Done.')
-'''        
 
+def th2():
+    while True:
+        data1 = client_socket.recv(1000)
+#        if not data1:
+#            break
+#        else:
+        print(data1.decode("utf-8"), len(data1))
+
+        if len(data1)<15:
+            print(data1.decode("utf-8"), len(data1))
+            client_socket.close()
+            server_sock.close()
+            print('finish program')
+            sys.exit()
+            os.system('systemctl poweroff')
+        
+
+def main():
+    try:
+        server_sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        host ='192.168.1.83'
+        port=10042
+        server_sock.bind((host, port))
+        server_sock.listen(100)
+        print("wait....")
+        client_socket, addr = server_sock.accept()
+        print('Connected by',addr)
+        print('Loading model...')
+
+        data=client_socket.recv(1024)
+        print(data.decode("utf-8"), len(data))
+        data=client_socket.recv(1024)
+        model_wrapper = ModelWrapper()
+        camera=jetson.utils.gstCamera(640,480,"csi://0")
+        chk=0
+        sok=0
+        while True:
+            img, width, height = camera.CaptureRGBA(zeroCopy=1)
+            jetson.utils.cudaDeviceSynchronize()
+            jetson.utils.saveImageRGBA('/home/vision/Desktop/segmentation-selectstar-master/input/jpgs/image.jpg',img,width,height)
+
+            if MODE == 'mp4':
+                generator = FrameGeneratorMP4(DATA_PATH, OUTPUT_PATH, show=SHOW_OUTPUT)
+            elif MODE == 'jpg':
+                generator = FrameGeneratorJpg(DATA_PATH, OUTPUT_PATH, show=SHOW_OUTPUT)
+            else:
+                raise NotImplementedError('MODE should be "mp4" or "jpg".')
+
+            for index, img in enumerate(tqdm(generator)):
+                segmap = model_wrapper.predict(img)
+                if OVERLAPPING:
+                    h, w, _ = np.array(segmap).shape
+                    img_resized = cv2.resize(img, (w, h))
+                    result = (img_resized * 0.5 + segmap * 0.5).astype(np.uint8)
+                else:
+                    result = segmap
+                generator.write(result)
+
+            generator.close()
+            image=Image.open('/home/vision/Desktop/segmentation-selectstar-master/output/jpgs/image.jpg')#'./input/jpgs/input.jpg')
+            pixel=np.array(image)
+            sum=0
+            for i in range(int(pixel.shape[1]/3),int(pixel.shape[1]*2/3)):# width
+                for j in range(int(pixel.shape[0]/3),int(pixel.shape[0]*2/3)):#height
+                    sum=sum+pixel[j,i]
+            avg=sum/(pixel.shape[1]*2/3-pixel.shape[1]/3)*(pixel.shape[0]*2/3-pixel.shape[0]/3)
+            print(avg[0],avg[1],avg[2])
+
+
+           
+            if avg[0]>100 and avg[1]>100 and avg[1]<150 and avg[2]<100:
+                print("bike lane")
+                sok=0
+            elif avg[0]>100 and avg[1]<150 and avg[2]<150:
+                print('caution zone')
+                sok=1
+            elif avg[0]>100 and avg[1]<150 and avg[2]>100:
+                print('crosswalk')
+                sok=2
+            elif avg[0]>100 and avg[1]>100 and avg[2]<150:
+                print('guide_block')
+                sok=3
+            elif avg[0]<150 and avg[1]<150 and avg[2]>100:
+                print('roadway')
+                sok=4
+            elif avg[0]<150 and avg[1]>100 and avg[2]<150:
+                print('sidewalk')
+                sok=0
+            if chk!=sok:
+                print(data)
+                print(sok)
+                client_socket.send(data)       
+                client_socket.send(sok.to_bytes(4, byteorder='little'))   
+            chk=sok
+		
+            print('Done.')
+        
+
+    except KeyboardInterrupt:
+        print('finish')
+        finish()
 if __name__ == '__main__':
 
     main()
+'''
+try:
+    
+    host ='192.168.1.83'
+    port=10032
+    server_sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
+    server_sock.bind((host, port))
+    server_sock.listen(100)
+    print("wait....")
+    client_socket, addr = server_sock.accept()
+    print('Connected by',addr)
+    data=client_socket.recv(1024)
+    print(data.decode("utf-8"), len(data))
+    data=client_socket.recv(1024)
+    print(data.decode("utf-8"), len(data))
+    t1=threading.Thread(target=th1, args=())
+#    t2=threading.Thread(target=th2, args=())
+    t1.start()
+#    t2.start()
+
+except KeyboardInterrupt:
+    client_socket.close()
+    server_sock.close()
+    print('finish program')
+    sys.exit()
+    os.system('systemctl poweroff')
+#    print('finish')
+#    finish()
+'''
+
+
+
+
+
