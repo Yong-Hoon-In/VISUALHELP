@@ -32,39 +32,35 @@ email_arv = 'NULL'
 gpio.setmode(gpio.BCM)
 #global email_send='lord4255@naver.com'
 # GPIO
+gpio.setup(TRIGER, gpio.OUT)
+gpio.setup(ECHO, gpio.IN)
+
 def Ultra_detect():
     try:
-        gpio.setup(TRIGER, gpio.OUT)
-        gpio.setup(ECHO,gpio.IN)
-        startTime = time.time()
-
-        gpio.output(TRIGER,gpio.LOW)
+        gpio.output(TRIGER, gpio.LOW)
         time.sleep(0.5)
-        gpio.output(TRIGER,gpio.HIGH)
+        gpio.output(TRIGER, gpio.HIGH)
         time.sleep(0.00001)
-        gpio.output(TRIGER,gpio.LOW)
+        gpio.output(TRIGER, gpio.LOW)
 
+ 
         while gpio.input(ECHO) == 0 :
-            startTime = time.time()
+            pulse_start = time.time()
             if gpio.input(ECHO) != 1:
                 gpio.setup(ECHO, gpio.OUT)
                 gpio.output(ECHO, gpio.LOW)
                 gpio.setup(ECHO, gpio.IN)
-                startTime = time.time()
+                pulse_start = time.time()
                 break
 
         while gpio.input(ECHO) == 1 :
-            endTime = time.time()
-        period = endTime - startTime
-        distance = period * 17000
-        distance = round(distance, 2)
+            pulse_end = time.time()
 
-        print('Distance : ', distance, 'cm', type(distance))
-        time.sleep(0.001)
-        #if 0 < distance and distance < 500:
-        #    return distance
-        #else :
-        #    return 0
+        pulse_duration = pulse_end - pulse_start
+        distance = pulse_duration * 17000
+        distance = round(distance, 2)
+        print ("Distance : ", distance, "cm")
+        time.sleep(0.01)
         return distance
 
     except UnboundLocalError as error:
@@ -169,6 +165,7 @@ host = '192.168.1.24'
 port = 10019
 server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
 server_sock.bind((host, port))
 server_sock.listen(1)
 
@@ -191,7 +188,6 @@ def thr2(sock):
         server_sock.close()
         sys.exit()
     elif len(recv_data)>10:
-        #recv_utf = str(recv_data.decode("utf-8")).split("b'",1)[1].rsplit("'",1)[0]
         print(recv_data.decode("utf-8"))
         recv_utf = recv_data.decode("utf-8").split()
         recv_utf = str(recv_utf).split('4')
@@ -200,8 +196,9 @@ def thr2(sock):
         return recv_utf[0]
 
 email_arv = thr2(client_socket)
-
 try:
+	p=0
+	label=0
 	while True:
 		# capture the next image
 		#img = input.Capture()
@@ -213,24 +210,92 @@ try:
 
 	# print the detections
 #		print("detected {:d} objects in image".format(len(detections)))
-		for detection in detections:
-			#print(detections[0].ClassID)
-			classlabel = detections[0].ClassID
+#		for detection in detections:
+#			print(detections[0].ClassID)
+#			classlabel = detections[0].ClassID
+		if p!=len(detections):#and distance<400
+			for i in range(len(detections)):
+				if detections[i].ClassID==9:#person
+					label=detections[i].ClassID
+					break;
+				elif detections[i].ClassID==3 and label!=9:#car
+					label=detections[i].ClassID
+				elif detections[i].ClassID==2 and label!=9 and label!=3:#bus
+					label=detections[i].ClassID
+				elif detections[i].ClassID==5 and label!=9 and label!=3 and label!=2:#cat
+					label=detections[i].ClassID
+				elif detections[i].ClassID==6 and label!=9 and label!=3 and label!=2 and label!=5:#dog
+					label=detections[i].ClassID
+				elif detections[i].ClassID==1 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6:#bicycle
+					label=detections[i].ClassID
+				elif detections[i].ClassID==10 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6 and label!=1:#scooter
+					label=detections[i].ClassID
+				elif detections[i].ClassID==11 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6 and label!=1 and label!=10:#truck
+					label=detections[i].ClassID
+				elif detections[i].ClassID==12 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6 and label!=1 and label!=10 and label!=11:#wheelchair
+					label=detections[i].ClassID
+				elif detections[i].ClassID==4 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6 and label!=1 and label!=10 and label!=11 and label!=12:#carrier
+					label=detections[i].ClassID
+				elif detections[i].ClassID==7 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6 and label!=1 and label!=10 and label!=11 and label!=12 and label!=4:#motorcycle
+					label=detections[i].ClassID
+				elif detections[i].ClassID==8 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6 and label!=1 and label!=10 and label!=11 and label!=12  and label!=4 and label!=7:#movable_signage
+					label=detections[i].ClassID
+				elif detections[i].ClassID==26 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6 and label!=1 and label!=10 and label!=11 and label!=12  and label!=4 and label!=7 and label!=8:#tree_trunk
+					label=detections[i].ClassID
+				elif detections[i].ClassID==15 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6 and label!=1 and label!=10 and label!=11 and label!=12  and label!=4 and label!=7 and label!=8 and label!=26:#bollard
+					label=detections[i].ClassID
+				elif detections[i].ClassID==13 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6 and label!=1 and label!=10 and label!=11 and label!=12  and label!=4 and label!=7 and label!=8 and label!=26 and label!=15:#barricade
+					label=detections[i].ClassID
+				elif detections[i].ClassID==14 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6 and label!=1 and label!=10 and label!=11 and label!=12  and label!=4 and label!=7 and label!=8 and label!=26 and label!=15 and label!=13:#bench
+					label=detections[i].ClassID
+				elif detections[i].ClassID==16 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6 and label!=1 and label!=10 and label!=11 and label!=12  and label!=4 and label!=7 and label!=8 and label!=26 and label!=15 and label!=13 and label!=14:#chair
+					label=detections[i].ClassID
+				elif detections[i].ClassID==17 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6 and label!=1 and label!=10 and label!=11 and label!=12  and label!=4 and label!=7 and label!=8 and label!=26 and label!=15 and label!=13 and label!=14 and label!=16:#fire_hy
+					label=detections[i].ClassID
+				elif detections[i].ClassID==20 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6 and label!=1 and label!=10 and label!=11 and label!=12  and label!=4 and label!=7 and label!=8 and label!=26 and label!=15 and label!=13 and label!=14 and label!=16 and label!=17:#pole
+					label=detections[i].ClassID
+				elif detections[i].ClassID==21 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6 and label!=1 and label!=10 and label!=11 and label!=12  and label!=4 and label!=7 and label!=8 and label!=26 and label!=15 and label!=13 and label!=14 and label!=16 and label!=17 and label!=20:#potted_plant
+					label=detections[i].ClassID
+				elif detections[i].ClassID==22 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6 and label!=1 and label!=10 and label!=11 and label!=12  and label!=4 and label!=7 and label!=8 and label!=26 and label!=15 and label!=13 and label!=14 and label!=16 and label!=17 and label!=20 and label!=21:#stop
+					label=detections[i].ClassID
+				elif detections[i].ClassID==15 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6 and label!=1 and label!=10 and label!=11 and label!=12  and label!=4 and label!=7 and label!=8 and label!=26 and label!=15 and label!=13 and label!=14 and label!=16 and label!=17 and label!=20 and label!=21 and label!=22:#table
+					label=detections[i].ClassID
+				elif detections[i].ClassID==24 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6 and label!=1 and label!=10 and label!=11 and label!=12  and label!=4 and label!=7 and label!=8 and label!=26 and label!=15 and label!=13 and label!=14 and label!=16 and label!=17 and label!=20 and label!=21 and label!=22 and label!=23:
+					label=detections[i].ClassID
+				elif detections[i].ClassID==25 and label!=9 and label!=3 and label!=2 and label!=5 and label!=6 and label!=1 and label!=10 and label!=11 and label!=12  and label!=4 and label!=7 and label!=8 and label!=26 and label!=15 and label!=13 and label!=14 and label!=16 and label!=17 and label!=20 and label!=21 and label!=22 and label!=23 and label!=24:
+					label=detections[i].ClassID
 
-		if repeat_count < 30:
-			Collision(email_arv)		# collision detect 
-		else :
-			if repeat_count % 15 == 0 :
-				distance = Ultra_detect()
-				if not distance :
-					distance = 0	# ultra detect
-			if temlabel != classlabel and 0 < distance and distance < 100 :
-				data2 = classlabel
+			
+			Collision(email_arv)
+			distance = Ultra_detect()
+
+			if distance is None:
+				distance=400
+			if p!=len(detections) and distance < 250:
+				print(label)
 				client_socket.send(data)
-				print('send', data2)
-				client_socket.send(data2.to_bytes(4, byteorder='little'))
-				temlabel = classlabel
-				repeat_count = 0
+				client_socket.send(label.to_bytes(4, byteorder='little'))
+				p=len(detections)
+			if distance<50:
+				warn=99
+				client_socket.send(data)
+				client_socket.send(warn.to_bytes(4, byteorder='little'))
+			#Collision(email.arv)
+			
+#		if repeat_count < 30:
+#			Collision(email_arv)		# collision detect 
+#		else :
+#			if repeat_count % 15 == 0 :
+#				distance = Ultra_detect()
+#				if not distance :
+#					distance = 0	# ultra detect
+#			if temlabel != classlabel and 0 < distance and distance < 100 :
+#				data2 = classlabel
+#				client_socket.send(data)
+#				print('send', data2)
+#				client_socket.send(data2.to_bytes(4, byteorder='little'))
+#				temlabel = classlabel
+#				repeat_count = 0
 
 	# render the image
 		#output.Render(img)
