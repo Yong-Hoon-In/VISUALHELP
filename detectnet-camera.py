@@ -13,7 +13,7 @@ from email import encoders
 import RPi.GPIO as gpio
 import time
 import warnings
-
+import subprocess
 import socket
 warnings.filterwarnings('ignore')
 
@@ -311,7 +311,8 @@ except KeyboardInterrupt:
         gpio.cleanup()
         server.quit() # gamil server quit
         server_sock.close()
-        sys.exit()
+#        subprocess.call(["shutdown","-h","now"]) #jetson nano shutdown
+        
 
 	 	#print out performance info
 		#net.PrintProfilerTimes()
