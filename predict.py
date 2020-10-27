@@ -22,6 +22,8 @@ import os
 from time import ctime
 import threading
 import sys
+import subprocess
+
 ### RUN OPTIONS ###
 MODEL_PATH = "/home/vision/Desktop/segmentation-selectstar-master/run/surface/deeplab/model_iou_77.pth.tar"
 ORIGINAL_HEIGHT = 300
@@ -38,10 +40,6 @@ MODE = 'jpg'  # 'mp4' or 'jpg'
 DATA_PATH = '/home/vision/Desktop/segmentation-selectstar-master/input/jpgs'  # .mp4 path or folder containing jpg images
 OUTPUT_PATH = '/home/vision/Desktop/segmentation-selectstar-master/output/jpgs'  # where video file or jpg frames folder should be saved.
 
-
-# MODE = 'mp4'
-# DATA_PATH = './test/test.mp4'
-# OUTPUT_PATH = './output/test.avi'
 
 SHOW_OUTPUT = True if 'DISPLAY' in os.environ else False  # whether to cv2.show()
 
@@ -195,90 +193,6 @@ class ModelWrapper:
                              interpolation=cv2.INTER_NEAREST)
         return resized
 
-def th1():
-    print('Loading model...')
-    model_wrapper = ModelWrapper()
-    camera=jetson.utils.gstCamera(640,480,"csi://0")
-    chk=0
-    sok=0
-    while True:
-        img, width, height = camera.CaptureRGBA(zeroCopy=1)
-        jetson.utils.cudaDeviceSynchronize()
-        jetson.utils.saveImageRGBA('/home/vision/Desktop/segmentation-selectstar-master/input/jpgs/image.jpg',img,width,height)
-
-        if MODE == 'mp4':
-            generator = FrameGeneratorMP4(DATA_PATH, OUTPUT_PATH, show=SHOW_OUTPUT)
-        elif MODE == 'jpg':
-            generator = FrameGeneratorJpg(DATA_PATH, OUTPUT_PATH, show=SHOW_OUTPUT)
-        else:
-            raise NotImplementedError('MODE should be "mp4" or "jpg".')
-
-        for index, img in enumerate(tqdm(generator)):
-            segmap = model_wrapper.predict(img)
-            if OVERLAPPING:
-                h, w, _ = np.array(segmap).shape
-                img_resized = cv2.resize(img, (w, h))
-                result = (img_resized * 0.5 + segmap * 0.5).astype(np.uint8)
-            else:
-                result = segmap
-            generator.write(result)
-
-        generator.close()
-        image=Image.open('/home/vision/Desktop/segmentation-selectstar-master/output/jpgs/image.jpg')#'./input/jpgs/input.jpg')
-        pixel=np.array(image)
-        sum=0
-        for i in range(int(pixel.shape[1]/3),int(pixel.shape[1]*2/3)):# width
-            for j in range(int(pixel.shape[0]/3),int(pixel.shape[0]*2/3)):#height
-                sum=sum+pixel[j,i]
-        avg=sum/(pixel.shape[1]*2/3-pixel.shape[1]/3)*(pixel.shape[0]*2/3-pixel.shape[0]/3)
-        print(avg[0],avg[1],avg[2])
-
-        
-        
-        if avg[0]>100 and avg[1]>100 and avg[1]<150:
-            print("bike lane")
-            sok=0
-        elif avg[0]>100 and avg[1]<150 and avg[2]<150:
-            print('caution zone')
-            sok=1
-        elif avg[0]>100 and avg[1]<150 and avg[2]>100:
-            print('crosswalk')
-            sok=2
-        elif avg[0]>100 and avg[1]>100 and avg[2]<150:
-            print('guide_block')
-            sok=3
-        elif avg[0]<100 and avg[1]<100 and avg[2]>155:
-            print('roadway')
-            sok=4
-        elif avg[0]<100 and avg[1]>120 and avg[2]<100:
-            print('sidewalk')
-            sok=0
-        if chk!=sok:
-#            print(data)
-            print(sok)
-            client_socket.send(data)       
-            client_socket.send(sok.to_bytes(4, byteorder='little'))   
-        chk=sok
-		
-        print('Done.')
-
-def th2():
-    while True:
-        data1 = client_socket.recv(1000)
-#        if not data1:
-#            break
-#        else:
-        print(data1.decode("utf-8"), len(data1))
-
-        if len(data1)<15:
-            print(data1.decode("utf-8"), len(data1))
-            client_socket.close()
-            server_sock.close()
-            print('finish program')
-            sys.exit()
-            os.system('systemctl poweroff')
-        
-
 def main():
     try:
         server_sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -315,7 +229,7 @@ def main():
                 if OVERLAPPING:
                     h, w, _ = np.array(segmap).shape
                     img_resized = cv2.resize(img, (w, h))
-                    result = (img_resized * 0.5 + segmap * 0.5).astype(np.uint8)
+                    result = (segmap).astype(np.uint8)
                 else:
                     result = segmap
                 generator.write(result)
@@ -329,40 +243,30 @@ def main():
                     sum=sum+pixel[j,i]
             avg=sum/(pixel.shape[1]*2/3-pixel.shape[1]/3)*(pixel.shape[0]*2/3-pixel.shape[0]/3)
             print(avg[0],avg[1],avg[2])
-
-
-           
-            if avg[0]>100 and avg[1]>100 and avg[1]<150 and avg[2]<100:
-                print("bike lane")
-                sok=0
-            elif avg[0]>100 and avg[1]<150 and avg[2]<150:
+            if (avg[0]>100 and avg[1]<150 and avg[2]<150) or (pixel[150,150,0]>250 and pixel[150,150,1]<5 and pixel[150,150,2]<5):
                 print('caution zone')
                 sok=1
-            elif avg[0]>100 and avg[1]<150 and avg[2]>100:
-                print('crosswalk')
-                sok=2
-            elif avg[0]>100 and avg[1]>100 and avg[2]<150:
-                print('guide_block')
-                sok=3
-            elif avg[0]<150 and avg[1]<150 and avg[2]>100:
+            elif (avg[0]<150 and avg[1]<150 and avg[2]>100) or (pixel[150,150,0]<5 and pixel[150,150,1]<5 and pixel[150,150,2]>250):
                 print('roadway')
                 sok=4
-            elif avg[0]<150 and avg[1]>100 and avg[2]<150:
-                print('sidewalk')
+            elif (avg[0]>100 and avg[1]<150 and avg[2]>100) or (pixel[150,150,0]>250 and pixel[150,150,1]<5 and pixel[150,150,2]>250) :
+                print('crosswalk')
+                sok=2
+            elif (avg[0]>100 and avg[1]>100 and avg[2]<150) or (pixel[150,150,0]>250 and pixel[150,150,1]>250 and pixel[150,150,2]<5):
+                print('guide_block')
+                sok=3
+            else:
+                print('nothing')
                 sok=0
-            if chk!=sok:
-                print(data)
-                print(sok)
-                client_socket.send(data)       
-                client_socket.send(sok.to_bytes(4, byteorder='little'))   
-            chk=sok
 		
             print('Done.')
         
 
     except KeyboardInterrupt:
         print('finish')
-        finish()
+#        client_socket.close()
+#        server_sock.close()
+#        subprocess.call(["shutdown", "-h", "now"]) #shudown jetson nano
 if __name__ == '__main__':
 
     main()
