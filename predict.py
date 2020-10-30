@@ -197,7 +197,7 @@ def main():
     try:
         server_sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         host ='192.168.1.83'
-        port=10042
+        port=10035
         server_sock.bind((host, port))
         server_sock.listen(100)
         print("wait....")
@@ -258,14 +258,17 @@ def main():
             else:
                 print('nothing')
                 sok=0
-		
+            if sok!=chk and sok!=0:
+                client_socket.send(data)
+                client_socket.send(sok.to_bytes(4, byteorder='little'))
+                chk=sok
             print('Done.')
         
 
     except KeyboardInterrupt:
         print('finish')
-#        client_socket.close()
-#        server_sock.close()
+        client_socket.close()
+        server_sock.close()
 #        subprocess.call(["shutdown", "-h", "now"]) #shudown jetson nano
 if __name__ == '__main__':
 
@@ -284,8 +287,10 @@ try:
     print('Connected by',addr)
     data=client_socket.recv(1024)
     print(data.decode("utf-8"), len(data))
+
     data=client_socket.recv(1024)
     print(data.decode("utf-8"), len(data))
+
     t1=threading.Thread(target=th1, args=())
 #    t2=threading.Thread(target=th2, args=())
     t1.start()
