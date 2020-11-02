@@ -188,10 +188,12 @@ def thr2(sock):
         server_sock.close()
         sys.exit()
     elif len(recv_data)>10:
+        print(recv_data)
         print(recv_data.decode("utf-8"))
-        recv_utf = recv_data.decode("utf-8").split()
-        recv_utf = str(recv_utf).split('4')
-        recv_utf = recv_utf[1].split("'")
+        recv_utf = str(recv_data)
+        recv_utf = recv_utf[10:]
+        print(recv_utf)
+        recv_utf = recv_utf.split("'")
         print("email=",recv_utf[0])
         return recv_utf[0]
 
@@ -200,6 +202,7 @@ try:
 	p=0
 	label=0
 	while True:
+		Collision(email_arv)
 		# capture the next image
 		#img = input.Capture()
 		img, width, height = camera.CaptureRGBA(zeroCopy=1)
@@ -213,7 +216,8 @@ try:
 #		for detection in detections:
 #			print(detections[0].ClassID)
 #			classlabel = detections[0].ClassID
-		if p!=len(detections):#and distance<400
+		if p!=len(detections):
+			label=0
 			for i in range(len(detections)):
 				if detections[i].ClassID==9:#person
 					label=detections[i].ClassID
@@ -266,36 +270,25 @@ try:
 					label=detections[i].ClassID
 
 			
-			Collision(email_arv)
-			distance = Ultra_detect()
 
+			distance = Ultra_detect()
+#			distance=200
 			if distance is None:
 				distance=400
-			if p!=len(detections) and distance < 250:
-				print(label)
+			if p!=len(detections) and distance < 250 and label!=0:
+				print(label ,type(label))
 				client_socket.send(data)
 				client_socket.send(label.to_bytes(4, byteorder='little'))
 				p=len(detections)
-			if distance<50:
+			if distance < 50:
 				warn=99
 				client_socket.send(data)
 				client_socket.send(warn.to_bytes(4, byteorder='little'))
-			#Collision(email.arv)
-			
-#		if repeat_count < 30:
-#			Collision(email_arv)		# collision detect 
-#		else :
-#			if repeat_count % 15 == 0 :
-#				distance = Ultra_detect()
-#				if not distance :
-#					distance = 0	# ultra detect
-#			if temlabel != classlabel and 0 < distance and distance < 100 :
-#				data2 = classlabel
-#				client_socket.send(data)
-#				print('send', data2)
-#				client_socket.send(data2.to_bytes(4, byteorder='little'))
-#				temlabel = classlabel
-#				repeat_count = 0
+		else:
+			end_stream = 0
+			client_socket.send(data)
+			client_socket.send(end_stream.to_bytes(4, byteorder='little'))
+
 
 	# render the image
 		#output.Render(img)
@@ -309,13 +302,17 @@ try:
 except KeyboardInterrupt:
         client_socket.close()
         gpio.cleanup()
-        server.quit() # gamil server quit
+        #server.quit() # gamil server quit
         server_sock.close()
 #        subprocess.call(["shutdown","-h","now"]) #jetson nano shutdown
         
+except BrokenPipeError:
+        client_socket.close()
+        gpio.cleanup()
+        #server.quit() # gamil server quit
+        server_sock.close()
+        subprocess.call(["shutdown","-h","now"]) #jetson nano shutdown
 
-	 	#print out performance info
-		#net.PrintProfilerTimes()
 
 	# exit on input/output EOS
 		#if not input.IsStreaming() or not output.IsStreaming():
