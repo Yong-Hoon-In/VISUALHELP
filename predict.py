@@ -238,6 +238,7 @@ def main():
             image=Image.open('/home/vision/Desktop/segmentation-selectstar-master/output/jpgs/image.jpg')#'./input/jpgs/input.jpg')
             pixel=np.array(image)
             sum=0
+#            client_socket.send(sum.to_bytes(4, byteorder='little'))
             for i in range(int(pixel.shape[1]/3),int(pixel.shape[1]*2/3)):# width
                 for j in range(int(pixel.shape[0]/3),int(pixel.shape[0]*2/3)):#height
                     sum=sum+pixel[j,i]
@@ -262,6 +263,10 @@ def main():
                 client_socket.send(data)
                 client_socket.send(sok.to_bytes(4, byteorder='little'))
                 chk=sok
+            else:
+                dummy=0
+                client_socket.send(data)
+                client_socket.send(dummy.to_bytes(4, byteorder='little'))
             print('Done.')
         
 
@@ -270,6 +275,11 @@ def main():
         client_socket.close()
         server_sock.close()
 #        subprocess.call(["shutdown", "-h", "now"]) #shudown jetson nano
+    except BrokenPipeError:
+        print('finish')
+        client_socket.close()
+        server_sock.close()
+        subprocess.call(["shutdown", "-h", "now"]) #shudown jetson nano
 if __name__ == '__main__':
 
     main()
