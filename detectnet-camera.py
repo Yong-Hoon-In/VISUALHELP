@@ -197,7 +197,7 @@ def thr2(sock):
         print("email=",recv_utf[0])
         return recv_utf[0]
 
-email_arv = thr2(client_socket)
+xemail_arv = thr2(client_socket)
 try:
 	p=0
 	label=0
@@ -272,14 +272,19 @@ try:
 			
 
 			distance = Ultra_detect()
-#			distance=200
 			if distance is None:
 				distance=400
-			if p!=len(detections) and distance < 250 and label!=0:
-				print(label ,type(label))
-				client_socket.send(data)
-				client_socket.send(label.to_bytes(4, byteorder='little'))
-				p=len(detections)
+			if p!=len(detections) and label!=0:
+				if label>13:
+					print(label ,type(label))
+					client_socket.send(data)
+					client_socket.send(label.to_bytes(4, byteorder='little'))
+					p=len(detections)
+				elif distance < 250 :
+					print(label ,type(label))
+					client_socket.send(data)
+					client_socket.send(label.to_bytes(4, byteorder='little'))
+					p=len(detections)
 			if distance < 50:
 				warn=99
 				client_socket.send(data)
