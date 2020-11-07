@@ -204,7 +204,6 @@ def main():
         client_socket, addr = server_sock.accept()
         print('Connected by',addr)
         print('Loading model...')
-
         data=client_socket.recv(1024)
         print(data.decode("utf-8"), len(data))
         data=client_socket.recv(1024)
@@ -243,17 +242,28 @@ def main():
                 for j in range(int(pixel.shape[0]/3),int(pixel.shape[0]*2/3)):#height
                     sum=sum+pixel[j,i]
             avg=sum/(pixel.shape[1]*2/3-pixel.shape[1]/3)*(pixel.shape[0]*2/3-pixel.shape[0]/3)
+            pixel0,pixel1,pixel2=0,0,0
+            for i in range(148,152,1):
+                for j in range(148,152,1):
+                    pixel0+=pixel[i,j,0]
+            for i in range(148,152,1):
+                for j in range(148,152,1):
+                    pixel1+=pixel[i,j,1]
+            for i in range(148,152,1):
+                for j in range(148,152,1):
+                    pixel2+=pixel[i,j,2]
+            pixle0=pixel0/10;pixel1=pixel1/10;pixel2=pixel2/10;
             print(avg[0],avg[1],avg[2])
-            if (avg[0]>100 and avg[1]<150 and avg[2]<150) or (pixel[150,150,0]>250 and pixel[150,150,1]<5 and pixel[150,150,2]<5):
+            if (avg[0]>150 and avg[1]<100 and avg[2]<100) or (pixel0>250 and pixel1<5 and pixel2<5):
                 print('caution zone')
-                sok=1
-            elif (avg[0]<150 and avg[1]<150 and avg[2]>100) or (pixel[150,150,0]<5 and pixel[150,150,1]<5 and pixel[150,150,2]>250):
+                sok=0
+            elif (avg[0]<100 and avg[1]<100 and avg[2]>150) or (pixel0<5 and pixel1<5 and pixel2>250):
                 print('roadway')
                 sok=4
-            elif (avg[0]>100 and avg[1]<150 and avg[2]>100) or (pixel[150,150,0]>250 and pixel[150,150,1]<5 and pixel[150,150,2]>250) :
+            elif (avg[0]>150 and avg[1]<100 and avg[2]>150) or (pixel0>250 and pixel1<5 and pixel2>250) :
                 print('crosswalk')
                 sok=2
-            elif (avg[0]>100 and avg[1]>100 and avg[2]<150) or (pixel[150,150,0]>250 and pixel[150,150,1]>250 and pixel[150,150,2]<5):
+            elif (avg[0]>150 and avg[1]>150 and avg[2]<100) or (pixel0>250 and pixel1>250 and pixel2<5):
                 print('guide_block')
                 sok=3
             else:
@@ -267,6 +277,7 @@ def main():
                 dummy=0
                 client_socket.send(data)
                 client_socket.send(dummy.to_bytes(4, byteorder='little'))
+            print(pixel0,pixel1,pixel2)
             print('Done.')
         
 
