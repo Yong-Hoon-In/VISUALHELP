@@ -157,8 +157,8 @@ camera = jetson.utils.gstCamera(640,480,"csi://0") # 1280/720
 display = jetson.utils.glDisplay()
 
 # create video sources & outputs
-#input = jetson.utils.videoSource(opt.input_URI, argv=sys.argv)
-#output = jetson.utils.videoOutput(opt.output_URI, argv=sys.argv+is_headless)
+input = jetson.utils.videoSource(opt.input_URI, argv=sys.argv)
+output = jetson.utils.videoOutput(opt.output_URI, argv=sys.argv+is_headless)
 
 # socket
 host = '192.168.1.24'
@@ -197,7 +197,7 @@ def thr2(sock):
         print("email=",recv_utf[0])
         return recv_utf[0]
 
-xemail_arv = thr2(client_socket)
+email_arv = thr2(client_socket)
 try:
 	p=0
 	label=0
